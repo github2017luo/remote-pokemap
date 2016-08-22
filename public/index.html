@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://npmcdn.com/axios/dist/axios.min.js"></script>
+    <style>
+      html,
+      body {
+        font-family: Arial, sans-serif;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var map;
+      
+      function getUserPosition() {
+          
+
+      }
+      
+      function updatePokemonData(coords) {
+        axios.get('/map-data?lng=coords.lng&lat=coords.lat')
+          .then(function (res) {
+            console.log(`Found ${res.data.pokemons.length} pokemon!`);
+            res.data.pokemons.forEach(function (pokemon) {
+              console.log(pokemon);
+              var marker = new google.maps.Marker({
+                position: {lat: pokemon.latitude, lng: pokemon.longitude},
+                map: map,
+                title: pokemon.pokemon_name
+              });
+            })
+            
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+      }
+      
+      function initMap(startCoords) {
+        // Constructor creates a new map - only center and zoom are required.
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: startCoords,
+          zoom: 16
+        });
+        
+
+        var userWatcher = navigator.geolocation.watchPosition((p) => {
+            console.log('position updated!', p.coords);
+            map.setCenter({
+                lat: p.coords.latitude,
+                lng: p.coords.longitude
+              });
+              // call http://594c35f8.ngrok.io/map-data
+              
+            updatePokemonData({
+                lat: p.coords.latitude,
+                lng: p.coords.longitude
+              });
+        })
+        
+        var userPosition = startCoords;
+        var marker = new google.maps.Marker({
+          position: userPosition,
+          map: map,
+          title: 'You are here!'
+        });
+      }
+      
+      function onLoad() {
+          navigator.geolocation.getCurrentPosition((p) => {
+              initMap({
+                lat: p.coords.latitude,
+                lng: p.coords.longitude
+              });
+              
+              //populate initial pokemonlocations
+              updatePokemonData({
+                lat: p.coords.latitude,
+                lng: p.coords.longitude
+              });
+          });
+      }
+    </script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDmtjEIgpQAh2ssJ54CKCOnBgjjjyvp4xI&v=3&callback=onLoad">
+    </script>
+
+  </body>
+</html>
