@@ -2,6 +2,8 @@
 <html>
   <head>
     <script src="https://npmcdn.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ramda/0.22.1/ramda.js"></script>
+
     <style>
       html,
       body {
@@ -20,25 +22,38 @@
     <div id="map"></div>
     <script>
       var map;
-      
-      function getUserPosition() {
-          
+      var pokedata;
 
+      // returns a promise for a list of pokemon metadata
+      function getPokemonList() {
+        if (pokedata) {
+          return Promise.resolve(pokedata);
+        }
+        return axios.get('pokemons').then((res) => {
+          pokedata = res.data;
+          return pokedata;
+        })
       }
       
       function updatePokemonData(coords) {
-        axios.get('/map-data?lng=coords.lng&lat=coords.lat')
+        var pokeListPromise = getPokemonList();
+        var mapDataPromise = axios.get(`/map-data-test?longitude=${coords.lng}&latitude=${coords.lat}`)
+
+        Promise.all([pokeListPromise, mapDataPromise])
           .then(function (res) {
-            console.log(`Found ${res.data.pokemons.length} pokemon!`);
-            res.data.pokemons.forEach(function (pokemon) {
+            var metadata = res[0];
+            var mapData = res[1].data;
+            console.log(`Found ${mapData.pokemons.length} pokemon!`);
+            mapData.pokemons.forEach(function (pokemon) {
               console.log(pokemon);
+              var pokemonData = R.find(R.propEq('id', String(pokemon.pokemon_id)))(metadata);
               var marker = new google.maps.Marker({
                 position: {lat: pokemon.latitude, lng: pokemon.longitude},
                 map: map,
-                title: pokemon.pokemon_name
+                title: pokemonData.name,
+                icon: `/pokemongo/pokemon/${pokemonData.num}.png`
               });
             })
-            
           })
           .catch(function (error) {
             console.log(error);
